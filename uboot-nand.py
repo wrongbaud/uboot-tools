@@ -7,6 +7,7 @@ import struct
 BAUD = 38400
 PAGE_SIZE = 0x200
 NAND_SIZE = 8 * (1024*1024)
+DRAM = 128 * (1024*1024)
 ENV = {}
 ser = None
 def send_cmd(cmd):
@@ -21,11 +22,21 @@ def get_env():
         if "=" in line:
             env_var = line.split("=")
             ENV[env_var[0]] = env_var[1]
-    print ENV
+
+def dump_mem(addr):
+    memstr = ''
+    resp = send_cmd("md.b {} 0x200".format(addr)).split("\n")
+    for line in resp:
+        md_vals = re.split('(([0-9a-f]{2}\s){16})',line)
+        if len(md_vals) > 2:
+            mem_vals = md_vals[1]
+            mem_vals = mem_vals.replace(" ",'')
+            memstr += mem_vals.decode("hex")
+    return memstr
 
 def dump_nand(block):
     bytestr = ''
-    resp = send_cmd("nand dump {}".format(block)).split("\n")
+    resp = send_cmd("nand dump {:X}".format(block)).split("\n")
     for line in resp:
         if re.search('(([0-9a-f]{2}\s){8})\s',line):
             line = line.strip("\t")
@@ -37,10 +48,17 @@ def dump_nand(block):
 
 def main(ser):
     get_env()
-    with open("test.bin",'wb') as t:
-        for x in range(0,NAND_SIZE/PAGE_SIZE+1):
+    '''
+    with open("memdump.bin",'wb') as md:
+        for x in range(0x1000000,0x1/0x200):
+            print("Dumping page {:X} of {:X}".format(x,DRAM/0x200))
+            md.write(dump_mem(x))
+    '''
+    with open("NAND-TEST.bin",'wb') as t:
+        for x in range(0,(NAND_SIZE/PAGE_SIZE)+1):
             print("Dumping page {:X} of {:X}".format(x,NAND_SIZE/PAGE_SIZE))
-            bytestr = dump_nand(x)
+            print("Dumping page {:X}".format(x*0x200,NAND_SIZE/PAGE_SIZE))
+            bytestr = dump_nand(x*0x200)
             t.write(bytestr)
 
 if __name__ == "__main__":
