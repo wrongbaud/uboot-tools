@@ -6,7 +6,7 @@ import struct
 
 BAUD = 38400
 PAGE_SIZE = 0x200
-NAND_SIZE = 8 * (1024*1024)
+NAND_SIZE = 64 * (1024*1024)
 DRAM = 128 * (1024*1024)
 ENV = {}
 ser = None
@@ -25,9 +25,9 @@ def get_env():
 
 def dump_mem(addr):
     memstr = ''
-    resp = send_cmd("md.b {} 0x200".format(addr)).split("\n")
+    resp = send_cmd("md.l 0x{:X} 0x200".format(addr)).split("\n")
     for line in resp:
-        md_vals = re.split('(([0-9a-f]{2}\s){16})',line)
+        md_vals = re.split('(([0-9a-f]{8}\s){4})',line)
         if len(md_vals) > 2:
             mem_vals = md_vals[1]
             mem_vals = mem_vals.replace(" ",'')
@@ -48,11 +48,11 @@ def dump_nand(block):
 
 def main(ser):
     get_env()
-    '''
+    #print(dump_mem(0x10F40))
     with open("memdump.bin",'wb') as md:
-        for x in range(0x1000000,0x1/0x200):
-            print("Dumping page {:X} of {:X}".format(x,DRAM/0x200))
-            md.write(dump_mem(x))
+        for x in range(0,DRAM/(4*0x200)):
+            print("Dumping page {:X} of {:X}".format(x,DRAM/(4*0x200)))
+            md.write(dump_mem(x*(4*0x200)))
     '''
     with open("NAND-TEST.bin",'wb') as t:
         for x in range(0,(NAND_SIZE/PAGE_SIZE)+1):
@@ -60,6 +60,7 @@ def main(ser):
             print("Dumping page {:X}".format(x*0x200,NAND_SIZE/PAGE_SIZE))
             bytestr = dump_nand(x*0x200)
             t.write(bytestr)
+    '''
 
 if __name__ == "__main__":
     port = sys.argv[1]
